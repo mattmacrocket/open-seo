@@ -8,6 +8,12 @@ export type EnrichedKeyword = {
   competition: number | null;
   keywordDifficulty: number | null;
   intent: KeywordIntent;
+  /**
+   * SERP item types the keyword triggers (e.g. "ai_overview",
+   * "featured_snippet"), in SERP order. Empty when the source carries no
+   * SERP data (Google-Ads-served countries, or no SERP snapshot on record).
+   */
+  serpFeatures: string[];
 };
 
 export function normalizeKeyword(input: string): string {

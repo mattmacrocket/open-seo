@@ -114,7 +114,10 @@ export async function fetchRelatedKeywords(input: {
       // Clickstream-refined volumes DOUBLE the request cost, so they are
       // opt-in — see specs/0004-keyword-data-source-routing.md.
       include_clickstream_data: input.includeClickstreamData ?? false,
-      include_serp_info: false,
+      // SERP feature context (serp_info.serp_item_types) per keyword. Unlike
+      // clickstream, this flag does not change the request price: DataForSEO
+      // only documents a cost multiplier for include_clickstream_data.
+      include_serp_info: true,
     }),
   ]);
   const task = assertOk(response);
@@ -138,7 +141,8 @@ export async function fetchKeywordSuggestions(input: {
       language_code: input.languageCode,
       limit: input.limit,
       include_clickstream_data: input.includeClickstreamData ?? false,
-      include_serp_info: false,
+      // SERP feature context per keyword; no cost impact (see related fetcher).
+      include_serp_info: true,
       include_seed_keyword: true,
       ignore_synonyms: false,
       exact_match: false,
@@ -165,7 +169,8 @@ export async function fetchKeywordIdeas(input: {
       language_code: input.languageCode,
       limit: input.limit,
       include_clickstream_data: input.includeClickstreamData ?? false,
-      include_serp_info: false,
+      // SERP feature context per keyword; no cost impact (see related fetcher).
+      include_serp_info: true,
       ignore_synonyms: false,
       closely_variants: false,
     }),

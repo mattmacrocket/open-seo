@@ -12,6 +12,7 @@ import {
 } from "@/client/components/table/AppDataTable";
 import {
   IntentBadge,
+  SerpFeatureBadges,
   SortHeader,
   type SortDir,
   type SortField,
@@ -166,6 +167,14 @@ export function KeywordResearchDesktopTable({
         meta: {
           headerClassName: "text-center",
           cellClassName: "whitespace-nowrap text-center",
+        },
+      }),
+      keywordColumnHelper.accessor("serpFeatures", {
+        header: "SERP",
+        cell: ({ getValue }) => <SerpFeatureBadges features={getValue()} />,
+        meta: {
+          headerClassName: "text-left",
+          cellClassName: "whitespace-nowrap",
         },
       }),
     ],

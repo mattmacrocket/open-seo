@@ -104,6 +104,7 @@ describe("MCP tool text output (service-backed tools)", () => {
           competition: 0.4,
           intent: "commercial",
           trend: [],
+          serpFeatures: ["organic", "ai_overview", "people_also_ask"],
         },
         {
           keyword: "free seo tools",
@@ -113,6 +114,7 @@ describe("MCP tool text output (service-backed tools)", () => {
           competition: null,
           intent: "informational",
           trend: [],
+          serpFeatures: [],
         },
       ],
       source: "related",
@@ -126,10 +128,16 @@ describe("MCP tool text output (service-backed tools)", () => {
     );
 
     const out = text(result);
-    expect(out).toContain("keyword | volume | KD | CPC | competition | intent");
-    expect(out).toContain("seo tools | 2400 | 18 | 3.25 | 0.40 | commercial");
+    expect(out).toContain(
+      "keyword | volume | KD | CPC | competition | intent | SERP features",
+    );
+    expect(out).toContain(
+      "seo tools | 2400 | 18 | 3.25 | 0.40 | commercial | organic,ai_overview,people_also_ask",
+    );
     // Second row proves it isn't truncated and nulls render as em dashes.
-    expect(out).toContain("free seo tools | 880 | — | — | — | informational");
+    expect(out).toContain(
+      "free seo tools | 880 | — | — | — | informational | —",
+    );
   });
 
   it("get_domain_keyword_suggestions renders keyword rows", async () => {

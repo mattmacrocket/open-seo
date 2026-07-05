@@ -24,7 +24,27 @@ type FetchResearchRowsParams = {
   creditFeature?: CreditFeature;
 };
 
-function mapKeywordDataItems(items: LabsKeywordDataItem[]): EnrichedKeyword[] {
+/**
+ * SERP item types arrive typed as string[] but come straight off the wire, so
+ * tolerate anything: non-arrays and non-string entries are dropped, duplicates
+ * collapsed, SERP order preserved. Unknown future types pass through as-is.
+ */
+function extractSerpFeatures(
+  serpInfo: LabsKeywordDataItem["serp_info"],
+): string[] {
+  const types: unknown = serpInfo?.serp_item_types;
+  if (!Array.isArray(types)) return [];
+  const features: string[] = [];
+  for (const type of types) {
+    if (typeof type !== "string" || type.length === 0) continue;
+    if (!features.includes(type)) features.push(type);
+  }
+  return features;
+}
+
+export function mapKeywordDataItems(
+  items: LabsKeywordDataItem[],
+): EnrichedKeyword[] {
   const rows: EnrichedKeyword[] = [];
   const seen = new Set<string>();
 
@@ -55,6 +75,7 @@ function mapKeywordDataItems(items: LabsKeywordDataItem[]): EnrichedKeyword[] {
       competition: item.keyword_info?.competition ?? null,
       keywordDifficulty: item.keyword_properties?.keyword_difficulty ?? null,
       intent: normalizeIntent(item.search_intent_info?.main_intent),
+      serpFeatures: extractSerpFeatures(item.serp_info),
     });
   }
 
@@ -63,7 +84,7 @@ function mapKeywordDataItems(items: LabsKeywordDataItem[]): EnrichedKeyword[] {
 
 /**
  * Google Ads items carry volume / CPC / paid competition but no keyword
- * difficulty or search intent (those are Labs-only).
+ * difficulty, search intent, or SERP features (those are Labs-only).
  */
 export function mapAdsKeywordItems(
   items: AdsKeywordIdeaItem[],
@@ -92,6 +113,7 @@ export function mapAdsKeywordItems(
         item.competition_index != null ? item.competition_index / 100 : null,
       keywordDifficulty: null,
       intent: "unknown",
+      serpFeatures: [],
     });
   }
 

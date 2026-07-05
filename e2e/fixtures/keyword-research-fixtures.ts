@@ -16,6 +16,16 @@ const MONTHLY_SEARCHES = [
   { year: 2026, month: 3, searchVolume: 2800 },
 ];
 
+// Cycles through common shapes: AI Overview, snippet-heavy, ads-heavy,
+// organic-only, and no SERP data at all.
+const SERP_FEATURE_SETS: string[][] = [
+  ["organic", "ai_overview", "people_also_ask", "related_searches"],
+  ["organic", "featured_snippet", "people_also_ask", "video", "images"],
+  ["organic", "paid", "shopping", "local_pack"],
+  ["organic"],
+  [],
+];
+
 function makeRow(
   keyword: string,
   index: number,
@@ -29,6 +39,7 @@ function makeRow(
     cpc: Number((1.25 + index * 0.15).toFixed(2)),
     competition: Number((0.05 + (index % 10) * 0.04).toFixed(2)),
     intent: index % 3 === 0 ? "commercial" : "informational",
+    serpFeatures: SERP_FEATURE_SETS[index % SERP_FEATURE_SETS.length],
     ...overrides,
   };
 }

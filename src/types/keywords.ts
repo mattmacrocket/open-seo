@@ -19,6 +19,11 @@ export type KeywordResearchRow = {
   cpc: number | null;
   competition: number | null;
   intent: KeywordIntent;
+  /**
+   * SERP item types the keyword triggers (e.g. "ai_overview",
+   * "featured_snippet"), in SERP order. Empty when unknown.
+   */
+  serpFeatures: string[];
 };
 
 export type SavedKeywordRow = {

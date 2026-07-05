@@ -68,6 +68,7 @@ const cachedKeywordRowSchema = z.object({
     "navigational",
     "unknown",
   ]),
+  serpFeatures: z.array(z.string()),
 });
 
 const sourceAttemptSchema = z.object({
@@ -87,9 +88,9 @@ const cachedResultSchema = z.object({
   }),
 });
 
-// v3: research volumes are no longer clickstream-refined, and Google-Ads-only
-// locations route to keywords_for_keywords.
-const CACHE_VERSION = 3;
+// v4: rows carry serpFeatures (include_serp_info flipped on), so pre-change
+// entries without SERP data never serve.
+const CACHE_VERSION = 4;
 
 async function fetchRowsFromSource(
   source: KeywordSource,

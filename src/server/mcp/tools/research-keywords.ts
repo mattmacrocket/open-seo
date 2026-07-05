@@ -52,6 +52,7 @@ type ResearchRow = {
   cpc: number | null;
   competition: number | null;
   intent: string;
+  serpFeatures?: string[];
 };
 
 // The full rows (including trend data) still ship in structuredContent; this
@@ -64,6 +65,11 @@ const RESEARCH_COLUMNS: McpTableColumn<ResearchRow>[] = [
   { header: "CPC", value: (row) => row.cpc },
   { header: "competition", value: (row) => row.competition },
   { header: "intent", value: (row) => row.intent },
+  {
+    header: "SERP features",
+    value: (row) =>
+      row.serpFeatures?.length ? row.serpFeatures.join(",") : null,
+  },
 ];
 
 export const researchKeywordsTool = {
@@ -71,7 +77,7 @@ export const researchKeywordsTool = {
   config: {
     title: "Research keywords (bulk)",
     description:
-      "Research keyword data (search volume, difficulty, CPC, related ideas) for 1-5 seed keywords in one call. Charges credits per seed (~30-100 credits each, varies by source; flat ~96 for countries served from Google Ads data, where difficulty/intent are unavailable). Returns per-seed results — a single bad seed won't fail the batch.",
+      "Research keyword data (search volume, difficulty, CPC, SERP features incl. AI Overview presence, related ideas) for 1-5 seed keywords in one call. Charges credits per seed (~30-100 credits each, varies by source; flat ~96 for countries served from Google Ads data, where difficulty/intent/SERP features are unavailable). Returns per-seed results — a single bad seed won't fail the batch.",
     inputSchema,
     outputSchema: {
       results: z.array(
@@ -152,7 +158,7 @@ export const researchKeywordsTool = {
           return `${header}\n${formatMcpTable(r.rows, RESEARCH_COLUMNS)}`;
         })
         .join("\n\n") +
-      `\n\nResearched ${okCount} of ${results.length} seeds${failCount > 0 ? ` (${failCount} failed)` : ""}. Columns: volume = monthly searches, KD = keyword difficulty (0-100), CPC in USD, competition = paid competition (0-1); "—" = unavailable.`;
+      `\n\nResearched ${okCount} of ${results.length} seeds${failCount > 0 ? ` (${failCount} failed)` : ""}. Columns: volume = monthly searches, KD = keyword difficulty (0-100), CPC in USD, competition = paid competition (0-1), SERP features = result types on the keyword's SERP (ai_overview means Google answers it with an AI Overview); "—" = unavailable.`;
 
     return mcpResponse({
       text,

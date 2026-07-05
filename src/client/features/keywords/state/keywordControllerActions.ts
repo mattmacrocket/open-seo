@@ -20,6 +20,7 @@ export const KEYWORD_RESEARCH_HEADERS = [
   "Competition",
   "Score",
   "Intent",
+  "SERP Features",
 ];
 
 export function keywordResearchExportRow(row: KeywordResearchRow): CsvValue[] {
@@ -30,6 +31,7 @@ export function keywordResearchExportRow(row: KeywordResearchRow): CsvValue[] {
     row.competition ?? "",
     row.keywordDifficulty ?? "",
     row.intent,
+    row.serpFeatures.join("; "),
   ];
 }
 
