@@ -5,6 +5,7 @@ import {
   type RawLighthouseAudit,
   type RawLighthouseCategory,
   scoreToPercent,
+  type StoredLighthouseFieldData,
   type StoredLighthousePayload,
 } from "@/server/lib/lighthouseStoredPayload";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
@@ -100,8 +101,32 @@ const psiCategorySchema = z
   })
   .passthrough();
 
+// CrUX real-user field data returned alongside the lab report. Parsed
+// tolerantly: every part is optional and a malformed loadingExperience block
+// falls back to `undefined` (via .catch) instead of failing the whole parse.
+const psiLoadingExperienceMetricSchema = z
+  .object({
+    percentile: z.number().optional(),
+    category: z.string().optional(),
+  })
+  .passthrough();
+
+const psiLoadingExperienceSchema = z
+  .object({
+    metrics: z.record(z.string(), psiLoadingExperienceMetricSchema).optional(),
+    overall_category: z.string().optional(),
+    // PSI sets this when the page itself has no CrUX data and the block
+    // actually contains origin-level numbers.
+    origin_fallback: z.boolean().optional(),
+  })
+  .passthrough()
+  .optional()
+  .catch(undefined);
+
 const psiResponseSchema = z
   .object({
+    loadingExperience: psiLoadingExperienceSchema,
+    originLoadingExperience: psiLoadingExperienceSchema,
     lighthouseResult: z
       .object({
         requestedUrl: z.string().optional(),
@@ -126,6 +151,127 @@ function summarizeZodIssues(error: z.ZodError, maxIssues = 3): string {
       return `${path}: ${issue.message}`;
     })
     .join("; ");
+}
+
+type PsiLoadingExperience = z.infer<typeof psiLoadingExperienceSchema>;
+type StoredFieldDataEntry = NonNullable<StoredLighthouseFieldData["page"]>;
+type StoredFieldCategory = StoredFieldDataEntry["overallCategory"];
+
+function toFieldCategory(category: string | undefined): StoredFieldCategory {
+  if (category === "FAST" || category === "AVERAGE" || category === "SLOW") {
+    return category;
+  }
+  // PSI reports "NONE" (or omits the field) when CrUX has no data.
+  return null;
+}
+
+function toFieldDataEntry(
+  experience: PsiLoadingExperience,
+): StoredFieldDataEntry | undefined {
+  if (!experience) return undefined;
+  const metrics = experience.metrics ?? {};
+  const lcp = metrics.LARGEST_CONTENTFUL_PAINT_MS;
+  const inp = metrics.INTERACTION_TO_NEXT_PAINT;
+  const cls = metrics.CUMULATIVE_LAYOUT_SHIFT_SCORE;
+
+  const lcpMs = typeof lcp?.percentile === "number" ? lcp.percentile : null;
+  const inpMs = typeof inp?.percentile === "number" ? inp.percentile : null;
+  // CrUX reports the CLS p75 as an integer scaled by 100 (e.g. 5 => 0.05).
+  const clsValue =
+    typeof cls?.percentile === "number" ? cls.percentile / 100 : null;
+
+  if (lcpMs == null && inpMs == null && clsValue == null) return undefined;
+
+  return {
+    lcpMs,
+    lcpCategory: toFieldCategory(lcp?.category),
+    inpMs,
+    inpCategory: toFieldCategory(inp?.category),
+    cls: clsValue,
+    clsCategory: toFieldCategory(cls?.category),
+    overallCategory: toFieldCategory(experience.overall_category),
+  };
+}
+
+function buildPsiFieldData(input: {
+  loadingExperience: PsiLoadingExperience;
+  originLoadingExperience: PsiLoadingExperience;
+}): StoredLighthouseFieldData | undefined {
+  // When the page has no CrUX data of its own, PSI echoes origin-level
+  // numbers under loadingExperience and flags it with origin_fallback.
+  const isOriginFallback = input.loadingExperience?.origin_fallback === true;
+  const page = isOriginFallback
+    ? undefined
+    : toFieldDataEntry(input.loadingExperience);
+  const origin = toFieldDataEntry(
+    input.originLoadingExperience ??
+      (isOriginFallback ? input.loadingExperience : undefined),
+  );
+
+  if (!page && !origin) return undefined;
+  return { page, origin };
+}
+
+export function parsePagespeedLighthousePayload(
+  raw: unknown,
+  input: {
+    url: string;
+    strategy: LighthouseStrategy;
+  },
+): StoredLighthousePayload {
+  const parsed = psiResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(
+      `PageSpeed Insights returned an invalid response: ${summarizeZodIssues(parsed.error)}`,
+    );
+  }
+
+  const result = parsed.data.lighthouseResult;
+  const categories: Record<string, RawLighthouseCategory> =
+    result.categories ?? {};
+  const audits: Record<string, RawLighthouseAudit> = result.audits ?? {};
+  const issueReport = buildStoredLighthouseIssues({ audits, categories });
+  const metrics = buildStoredLighthouseMetrics({ audits });
+  const fieldData = buildPsiFieldData({
+    loadingExperience: parsed.data.loadingExperience,
+    originLoadingExperience: parsed.data.originLoadingExperience,
+  });
+
+  const storedPayload: StoredLighthousePayload = {
+    version: 2,
+    source: "pagespeed-insights",
+    hasIssueDetails: issueReport.hasIssueDetails,
+    metadata: {
+      requestedUrl: result.requestedUrl ?? input.url,
+      finalUrl: result.finalUrl ?? result.finalDisplayedUrl ?? input.url,
+      strategy: input.strategy,
+      fetchedAt: new Date().toISOString(),
+      lighthouseVersion: result.lighthouseVersion ?? null,
+      taskId: null,
+      // PageSpeed Insights is free; no per-request cost to record.
+      cost: 0,
+    },
+    scores: {
+      performance: scoreToPercent(categories.performance?.score),
+      accessibility: scoreToPercent(categories.accessibility?.score),
+      "best-practices": scoreToPercent(categories["best-practices"]?.score),
+      seo: scoreToPercent(categories.seo?.score),
+    },
+    metrics,
+    ...(fieldData ? { fieldData } : {}),
+    issues: issueReport.issues,
+  };
+
+  const allScoresMissing = Object.values(storedPayload.scores).every(
+    (score) => score == null,
+  );
+  if (allScoresMissing) {
+    throw new Error(
+      `PageSpeed Insights returned no category scores for ${storedPayload.metadata.finalUrl}`,
+    );
+  }
+
+  return storedPayload;
 }
 
 export async function fetchPagespeedLighthouse(input: {
@@ -159,52 +305,5 @@ export async function fetchPagespeedLighthouse(input: {
     return response.json();
   });
 
-  const parsed = psiResponseSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new Error(
-      `PageSpeed Insights returned an invalid response: ${summarizeZodIssues(parsed.error)}`,
-    );
-  }
-
-  const result = parsed.data.lighthouseResult;
-  const categories: Record<string, RawLighthouseCategory> =
-    result.categories ?? {};
-  const audits: Record<string, RawLighthouseAudit> = result.audits ?? {};
-  const issueReport = buildStoredLighthouseIssues({ audits, categories });
-  const metrics = buildStoredLighthouseMetrics({ audits });
-
-  const storedPayload: StoredLighthousePayload = {
-    version: 2,
-    source: "pagespeed-insights",
-    hasIssueDetails: issueReport.hasIssueDetails,
-    metadata: {
-      requestedUrl: result.requestedUrl ?? input.url,
-      finalUrl: result.finalUrl ?? result.finalDisplayedUrl ?? input.url,
-      strategy: input.strategy,
-      fetchedAt: new Date().toISOString(),
-      lighthouseVersion: result.lighthouseVersion ?? null,
-      taskId: null,
-      // PageSpeed Insights is free; no per-request cost to record.
-      cost: 0,
-    },
-    scores: {
-      performance: scoreToPercent(categories.performance?.score),
-      accessibility: scoreToPercent(categories.accessibility?.score),
-      "best-practices": scoreToPercent(categories["best-practices"]?.score),
-      seo: scoreToPercent(categories.seo?.score),
-    },
-    metrics,
-    issues: issueReport.issues,
-  };
-
-  const allScoresMissing = Object.values(storedPayload.scores).every(
-    (score) => score == null,
-  );
-  if (allScoresMissing) {
-    throw new Error(
-      `PageSpeed Insights returned no category scores for ${storedPayload.metadata.finalUrl}`,
-    );
-  }
-
-  return storedPayload;
+  return parsePagespeedLighthousePayload(raw, input);
 }

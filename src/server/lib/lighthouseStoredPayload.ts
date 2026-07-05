@@ -39,6 +39,27 @@ const storedLighthouseMetricsSchema = z.object({
   serverResponseTime: storedLighthouseMetricSchema,
 });
 
+// Chrome UX Report (CrUX) real-user categories as returned by PageSpeed
+// Insights loadingExperience / originLoadingExperience.
+const storedLighthouseFieldCategorySchema = z.enum(["FAST", "AVERAGE", "SLOW"]);
+
+const storedLighthouseFieldDataEntrySchema = z.object({
+  lcpMs: z.number().nullable(),
+  lcpCategory: storedLighthouseFieldCategorySchema.nullable(),
+  inpMs: z.number().nullable(),
+  inpCategory: storedLighthouseFieldCategorySchema.nullable(),
+  cls: z.number().nullable(),
+  clsCategory: storedLighthouseFieldCategorySchema.nullable(),
+  overallCategory: storedLighthouseFieldCategorySchema.nullable(),
+});
+
+// Optional on version 2 payloads: only the PageSpeed Insights path can supply
+// CrUX field data, and payloads stored before this field existed still parse.
+const storedLighthouseFieldDataSchema = z.object({
+  page: storedLighthouseFieldDataEntrySchema.optional(),
+  origin: storedLighthouseFieldDataEntrySchema.optional(),
+});
+
 const storedLighthouseIssueSchema = z.object({
   category: z.enum(LIGHTHOUSE_CATEGORIES),
   auditKey: z.string(),
@@ -73,12 +94,16 @@ export const storedLighthousePayloadSchema = z.object({
     seo: z.number().nullable(),
   }),
   metrics: storedLighthouseMetricsSchema,
+  fieldData: storedLighthouseFieldDataSchema.optional(),
   issues: z.array(storedLighthouseIssueSchema),
 });
 
 type StoredLighthouseMetric = z.infer<typeof storedLighthouseMetricSchema>;
 type StoredLighthouseMetrics = z.infer<typeof storedLighthouseMetricsSchema>;
 export type StoredLighthouseIssue = z.infer<typeof storedLighthouseIssueSchema>;
+export type StoredLighthouseFieldData = z.infer<
+  typeof storedLighthouseFieldDataSchema
+>;
 export type StoredLighthousePayload = z.infer<
   typeof storedLighthousePayloadSchema
 >;

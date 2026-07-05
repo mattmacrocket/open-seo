@@ -10,6 +10,7 @@ import {
 import type {
   CategoryTab,
   ExportPayload,
+  LighthouseFieldData,
   LighthouseIssue,
   LighthouseMetrics,
   LighthouseScores,
@@ -26,6 +27,7 @@ export function LighthouseIssuesHeader({
   finalUrl,
   scores,
   metrics,
+  fieldData,
   severityCounts,
 }: {
   backLabel: string;
@@ -34,6 +36,7 @@ export function LighthouseIssuesHeader({
   finalUrl?: string;
   scores?: LighthouseScores | null;
   metrics?: LighthouseMetrics | null;
+  fieldData?: LighthouseFieldData | null;
   severityCounts: { critical: number; warning: number; info: number };
 }) {
   return (
@@ -57,7 +60,11 @@ export function LighthouseIssuesHeader({
               {finalUrl ?? "Loading URL..."}
             </p>
           </div>
-          <LighthouseIssuesSummary scores={scores} metrics={metrics} />
+          <LighthouseIssuesSummary
+            scores={scores}
+            metrics={metrics}
+            fieldData={fieldData}
+          />
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="badge border border-error/30 bg-error/10 text-error/80 gap-1">
               <FileWarning className="size-3" />

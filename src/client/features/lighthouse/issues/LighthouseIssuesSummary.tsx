@@ -1,15 +1,22 @@
-import type { LighthouseMetrics, LighthouseScores } from "./types";
+import type {
+  LighthouseFieldData,
+  LighthouseMetrics,
+  LighthouseScores,
+} from "./types";
 
 export function LighthouseIssuesSummary({
   scores,
   metrics,
+  fieldData,
 }: {
   scores?: LighthouseScores | null;
   metrics?: LighthouseMetrics | null;
+  fieldData?: LighthouseFieldData | null;
 }) {
   const metricItems = getMetricItems(metrics);
+  const fieldEntry = fieldData?.page ?? fieldData?.origin;
 
-  if (!scores && metricItems.length === 0) {
+  if (!scores && metricItems.length === 0 && !fieldEntry) {
     return null;
   }
 
@@ -40,7 +47,104 @@ export function LighthouseIssuesSummary({
           ))}
         </div>
       ) : null}
+      {fieldEntry ? (
+        <FieldDataSummary
+          entry={fieldEntry}
+          isOriginFallback={fieldData?.page == null}
+        />
+      ) : null}
     </>
+  );
+}
+
+type FieldDataEntry = NonNullable<LighthouseFieldData["page"]>;
+type FieldCategory = FieldDataEntry["overallCategory"];
+
+function fieldCategoryClass(category: FieldCategory) {
+  if (category === "FAST") {
+    return "border-success/30 bg-success/10 text-success";
+  }
+  if (category === "AVERAGE") {
+    return "border-warning/30 bg-warning/10 text-warning";
+  }
+  if (category === "SLOW") {
+    return "border-error/30 bg-error/10 text-error";
+  }
+  return "border-base-300 bg-base-200/40 text-base-content/60";
+}
+
+function formatFieldMs(ms: number) {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`;
+}
+
+function getFieldItems(entry: FieldDataEntry) {
+  const items: Array<{
+    label: string;
+    value: string;
+    category: FieldCategory;
+  }> = [];
+  if (entry.lcpMs != null) {
+    items.push({
+      label: "LCP",
+      value: formatFieldMs(entry.lcpMs),
+      category: entry.lcpCategory,
+    });
+  }
+  if (entry.inpMs != null) {
+    items.push({
+      label: "INP",
+      value: formatFieldMs(entry.inpMs),
+      category: entry.inpCategory,
+    });
+  }
+  if (entry.cls != null) {
+    items.push({
+      label: "CLS",
+      value: entry.cls.toFixed(2),
+      category: entry.clsCategory,
+    });
+  }
+  return items;
+}
+
+function FieldDataSummary({
+  entry,
+  isOriginFallback,
+}: {
+  entry: FieldDataEntry;
+  isOriginFallback: boolean;
+}) {
+  const items = getFieldItems(entry);
+  if (items.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-box border border-base-300 bg-base-200/25 px-4 py-3">
+      <span className="text-xs text-base-content/50 uppercase tracking-wide">
+        Field data (real users, 28-day CrUX)
+      </span>
+      {isOriginFallback ? (
+        <span
+          className="badge badge-sm border border-base-300 bg-base-200/60 text-base-content/60"
+          title="No page-level data in CrUX; showing whole-origin numbers"
+        >
+          origin
+        </span>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {items.map((item) => (
+          <span
+            key={item.label}
+            title={`75th percentile ${item.label} for real Chrome users`}
+            className={`badge badge-sm gap-1 border font-medium tabular-nums ${fieldCategoryClass(item.category)}`}
+          >
+            <span className="uppercase tracking-wide opacity-70">
+              {item.label}
+            </span>
+            {item.value}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
