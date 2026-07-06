@@ -7,6 +7,7 @@ import {
   Link2,
   MessageSquare,
   Search,
+  SearchCheck,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
@@ -36,6 +37,12 @@ const projectNavItems = [
     label: "Search Performance",
     icon: BarChart3,
     matchSegment: "/search-performance",
+  },
+  {
+    to: "/p/$projectId/indexation" as const,
+    label: "Indexation Coverage",
+    icon: SearchCheck,
+    matchSegment: "/indexation",
   },
   {
     to: "/p/$projectId/domain" as const,
@@ -105,6 +112,10 @@ export function getProjectNavGroups(projectId: string) {
     {
       type: "standalone" as const,
       item: bySegment("/search-performance"),
+    },
+    {
+      type: "standalone" as const,
+      item: bySegment("/indexation"),
     },
     {
       type: "group" as const,
