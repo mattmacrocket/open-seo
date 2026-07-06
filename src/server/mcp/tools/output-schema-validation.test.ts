@@ -152,6 +152,110 @@ describe("DataForSEO research tool output schemas", () => {
   });
 });
 
+describe("get_striking_distance output schema", () => {
+  it("accepts a connected payload with striking-distance rows", async () => {
+    const { getStrikingDistanceTool } = await import("./get-striking-distance");
+    const schema = normalizeObjectSchema(
+      getStrikingDistanceTool.config.outputSchema,
+    );
+    if (!schema) throw new Error("output schema did not normalize");
+
+    const result = await safeParseAsync(schema, {
+      ok: true,
+      siteUrl: "https://example.com/",
+      startDate: "2026-04-27",
+      endDate: "2026-05-25",
+      rowCount: 1,
+      rows: [
+        {
+          query: "seo tools",
+          page: "https://example.com/a",
+          clicks: 5,
+          impressions: 200,
+          position: 8,
+        },
+      ],
+      meta: {
+        organizationId: "org_123",
+        projectId: "project_123",
+        url: "https://app.example.com/p/project_123/search-performance",
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a not-connected payload", async () => {
+    const { getStrikingDistanceTool } = await import("./get-striking-distance");
+    const schema = normalizeObjectSchema(
+      getStrikingDistanceTool.config.outputSchema,
+    );
+    if (!schema) throw new Error("output schema did not normalize");
+
+    const result = await safeParseAsync(schema, {
+      ok: false,
+      reason: "not_connected",
+      connectUrl: "https://app.example.com/p/project_123/settings",
+    });
+
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("get_serp_analysis output schema", () => {
+  it("accepts a SERP analysis payload with authority fields", async () => {
+    const { getSerpAnalysisTool } = await import("./get-serp-analysis");
+    const schema = normalizeObjectSchema(
+      getSerpAnalysisTool.config.outputSchema,
+    );
+    if (!schema) throw new Error("output schema did not normalize");
+
+    const result = await safeParseAsync(schema, {
+      requestedKeyword: "best crm software",
+      items: [
+        {
+          rank: 1,
+          title: "Best CRM Software 2026",
+          url: "https://example.com/best-crm",
+          domain: "example.com",
+          description: "A roundup of the best CRM tools.",
+          etv: 1200.5,
+          estimatedPaidTrafficCost: 800,
+          referringDomains: 120,
+          backlinks: 900,
+          isNew: false,
+          rankChange: null,
+        },
+      ],
+      meta: {
+        organizationId: "org_123",
+        projectId: "project_123",
+        url: "https://app.example.com/p/project_123/keywords",
+        creditsCharged: 45,
+        creditsRemaining: 955,
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts the no_organic_results shape with an empty items array", async () => {
+    const { getSerpAnalysisTool } = await import("./get-serp-analysis");
+    const schema = normalizeObjectSchema(
+      getSerpAnalysisTool.config.outputSchema,
+    );
+    if (!schema) throw new Error("output schema did not normalize");
+
+    const result = await safeParseAsync(schema, {
+      requestedKeyword: "an extremely obscure query",
+      reason: "no_organic_results",
+      items: [],
+    });
+
+    expect(result.success).toBe(true);
+  });
+});
+
 describe("get_backlinks_profile MCP tool", () => {
   it("returns paginated backlink rows and honors filters, sorting, and mode", async () => {
     mocks.profileBacklinksPage.mockResolvedValue(backlinkPage);

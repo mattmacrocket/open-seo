@@ -5,7 +5,9 @@ import { getBacklinksProfileTool } from "@/server/mcp/tools/get-backlinks-profil
 import { getDomainKeywordSuggestionsTool } from "@/server/mcp/tools/get-domain-keyword-suggestions";
 import { getDomainOverviewTool } from "@/server/mcp/tools/get-domain-overview";
 import { getRankTrackerTool } from "@/server/mcp/tools/get-rank-tracker";
+import { getSerpAnalysisTool } from "@/server/mcp/tools/get-serp-analysis";
 import { getSerpResultsTool } from "@/server/mcp/tools/get-serp-results";
+import { getStrikingDistanceTool } from "@/server/mcp/tools/get-striking-distance";
 import { listProjectsTool } from "@/server/mcp/tools/list-projects";
 import { listSavedKeywordsTool } from "@/server/mcp/tools/list-saved-keywords";
 import {
@@ -199,6 +201,24 @@ export function registerOpenSeoMcpTools(server: McpServer) {
       inspectUrlsTool.name,
       inspectUrlsTool.config.outputSchema,
       inspectUrlsTool.handler,
+    ),
+  );
+  server.registerTool(
+    getStrikingDistanceTool.name,
+    getStrikingDistanceTool.config,
+    instrumentMcpToolHandler(
+      getStrikingDistanceTool.name,
+      getStrikingDistanceTool.config.outputSchema,
+      getStrikingDistanceTool.handler,
+    ),
+  );
+  server.registerTool(
+    getSerpAnalysisTool.name,
+    getSerpAnalysisTool.config,
+    instrumentMcpToolHandler(
+      getSerpAnalysisTool.name,
+      getSerpAnalysisTool.config.outputSchema,
+      getSerpAnalysisTool.handler,
     ),
   );
 }

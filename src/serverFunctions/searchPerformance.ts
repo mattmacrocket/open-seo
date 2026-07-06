@@ -32,8 +32,10 @@ const EXPORT_ROW_LIMIT = 1000;
 
 /** Build GSC filter groups shared by every call. Device applies everywhere;
  *  country applies everywhere except the country breakdown itself (so the
- *  dropdown keeps every option visible while one country is selected). */
-function buildGscFilters(data: { device?: string; country?: string }): {
+ *  dropdown keeps every option visible while one country is selected).
+ *  Exported for reuse by the get_striking_distance MCP tool, which needs the
+ *  same device/country filter shape as this page. */
+export function buildGscFilters(data: { device?: string; country?: string }): {
   deviceFilters: GscPerformanceFilter[];
   filters: GscPerformanceFilter[];
 } {

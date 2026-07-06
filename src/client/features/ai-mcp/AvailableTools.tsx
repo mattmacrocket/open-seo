@@ -79,6 +79,12 @@ const toolCategories: ToolCategory[] = [
         title: "Get backlinks profile",
         description: "Fetch paginated link-level backlink rows.",
       },
+      {
+        name: "get_serp_analysis",
+        title: "Analyze a keyword's SERP",
+        description:
+          "See what the current top results contain, with authority context.",
+      },
     ],
   },
   {
@@ -115,6 +121,12 @@ const toolCategories: ToolCategory[] = [
         title: "Inspect URLs",
         description:
           "Check index status, crawl, and canonical for up to 10 URLs.",
+      },
+      {
+        name: "get_striking_distance",
+        title: "Get striking-distance queries",
+        description:
+          "Find queries ranking 5-20 where a content fix could move traffic.",
       },
     ],
   },
