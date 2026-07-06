@@ -19,6 +19,7 @@ const SKILL_NAMES = [
   "competitive-landscape",
   "competitor-analysis",
   "link-prospecting",
+  "striking-distance-to-pr",
 ];
 const SKILLS_INSTALL = `npx skills add every-app/open-seo`;
 const ALL_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*'`;

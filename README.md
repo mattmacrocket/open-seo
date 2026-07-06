@@ -88,6 +88,7 @@ They guide your agent through SEO tasks and use the OpenSEO MCP so your agent ma
 - `competitive-landscape`
 - `competitor-analysis`
 - `link-prospecting`
+- `striking-distance-to-pr`
 
 ### Installation Guide
 
